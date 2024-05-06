@@ -3,10 +3,12 @@ package SSU.MyMedicine.service;
 import SSU.MyMedicine.DAO.UserRepository;
 import SSU.MyMedicine.VO.LoginVO;
 import SSU.MyMedicine.VO.UserVO;
+import SSU.MyMedicine.entity.Medicine;
 import SSU.MyMedicine.entity.Prescription;
 import SSU.MyMedicine.entity.User;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -95,20 +97,9 @@ public class UserService {
         return pidList;
     }
 
-//    public List<TodoDTO> findTodoByEmail(String email) {
-//        UserEntity user = userRepository.findByEmail(email);
-//        if (user == null)
-//            throw new EntityNotFoundException("Entity not found with email : " + email);
-//
-//        List<TodoEntity> todoList = user.getTodoEntityList();
-//        if (todoList.isEmpty())
-//            throw new RuntimeException("No todos found with email : " + email);
-//
-//        List<TodoDTO> todoDTOS = new ArrayList<>();
-//        for (TodoEntity todoEntity : todoList) {
-//            TodoDTO todoDTO = todoEntity.toTodoDTO();
-//            todoDTOS.add(todoDTO);
-//        }
-//        return todoDTOS;
-//    }
+    @Transactional
+    public void saveMedicine(User user, List<Medicine> medicineList){
+        user.setMedicineList(medicineList);
+        userRepository.save(user);
+    }
 }

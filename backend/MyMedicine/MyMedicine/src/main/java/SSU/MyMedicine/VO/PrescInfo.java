@@ -22,6 +22,7 @@ public class PrescInfo {
     private Integer duration;
     private List<MedicineVO> medicine = new ArrayList<>();
     private String generatedInstruction = "";
+    private String alert;
 
     @JsonProperty("pID")
     public Integer getpID(){
