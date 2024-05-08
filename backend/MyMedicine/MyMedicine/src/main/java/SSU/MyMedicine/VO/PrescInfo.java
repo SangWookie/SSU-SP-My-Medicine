@@ -3,10 +3,7 @@ package SSU.MyMedicine.VO;
 import SSU.MyMedicine.entity.Medicine;
 import SSU.MyMedicine.entity.Prescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -14,6 +11,7 @@ import java.util.List;
 
 @ToString
 @Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class PrescInfo {
@@ -22,7 +20,8 @@ public class PrescInfo {
     private Integer duration;
     private List<MedicineVO> medicine = new ArrayList<>();
     private String generatedInstruction = "";
-    private String alert;
+    private List<String> duplicateMed = new ArrayList<>();
+    private List<String> allergicMed = new ArrayList<>();
 
     @JsonProperty("pID")
     public Integer getpID(){

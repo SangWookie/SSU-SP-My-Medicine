@@ -2,6 +2,7 @@ package SSU.MyMedicine.controller;
 
 import SSU.MyMedicine.VO.*;
 import SSU.MyMedicine.entity.Allergic;
+import SSU.MyMedicine.entity.Medicine;
 import SSU.MyMedicine.entity.Prescription;
 import SSU.MyMedicine.entity.User;
 import SSU.MyMedicine.service.AllergicService;
@@ -17,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @org.springframework.web.bind.annotation.RestController
 public class RestController {
@@ -87,25 +89,53 @@ public class RestController {
     }
 
     @GetMapping("/getPrescList")
-    public ResponseEntity<PrescListVO> prescList(@RequestParam("uID") Integer uID){
+    public ResponseEntity<PrescListVO> prescList(@RequestParam("uID") Integer uID) {
         User user = userService.findByUid(uID);
         return ResponseEntity.ok(new PrescListVO(userService.getPrescFromUser(user)));
     }
 
     @GetMapping("/getPrescInfo")
-    public ResponseEntity<PrescInfo> getPrescInfo(@RequestParam("pID") Integer pID){
+    public ResponseEntity<PrescInfo> getPrescInfo(@RequestParam("pID") Integer pID) {
         Prescription prescription = prescriptionService.findByPid(pID);
-        return ResponseEntity.ok(new PrescInfo(prescription));
+
+        // 주의사항 생성 해야되는지 판별해서 추가하여 결과 반환
+        // 해당 pID의 처방건에 대해 User에 겹치는 약품 string 반환
+        User prescUser = prescription.getUser();
+        List<Medicine> userMedList = prescUser.getMedicineList();
+        List<Medicine> prescMedList = prescription.getMedList();
+        List<String> dupMedList = new ArrayList<>();
+        for (Medicine userMed : userMedList) {
+            for (Medicine prescMed : prescMedList) {
+                if (!Objects.equals(prescMed.getMid(), userMed.getMid())) {
+                    if (Objects.equals(prescMed.getMedGroup(), userMed.getMedGroup())) {
+                        dupMedList.add(prescMed.getMedName());
+                    }
+                }
+            }
+        }
+        List<String> allergicMedList = new ArrayList<>();
+        for(Medicine prescMed : prescMedList){
+            for(Allergic allergic : prescUser.getAllergicList()){
+                if(Objects.equals(allergic.getInfo(), prescMed.getMedComp())){
+                    allergicMedList.add(prescMed.getMedName());
+                }
+            }
+        }
+        PrescInfo prescInfo = new PrescInfo(prescription);
+        prescInfo.setDuplicateMed(dupMedList);
+        prescInfo.setAllergicMed(allergicMedList);
+
+        return ResponseEntity.ok(prescInfo);
     }
 
     @GetMapping(value = "/getPrescPic", produces = MediaType.IMAGE_JPEG_VALUE)
-    public ResponseEntity<byte[]> getPrescPic(@RequestParam("pID") Integer pID) throws IOException{
+    public ResponseEntity<byte[]> getPrescPic(@RequestParam("pID") Integer pID) throws IOException {
         Prescription prescription = prescriptionService.findByPid(pID);
         return ResponseEntity.ok(prescriptionService.getPrescImg(prescription.getImageNum()));
     }
 
     @DeleteMapping("/delPresc")
-    public ResponseEntity<String> delPresc(@RequestParam("pID")Integer pID){
+    public ResponseEntity<String> delPresc(@RequestParam("pID") Integer pID) {
         Prescription prescription = prescriptionService.findByPid(pID);
         prescriptionService.delete(prescription);
         return ResponseEntity.ok("Prescription deleted with pid : " + pID);
@@ -126,8 +156,9 @@ public class RestController {
     public ResponseEntity<String> entityNotFoundExceptionHandler(EntityNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
     }
+
     @ExceptionHandler(IOException.class)
-    public ResponseEntity<String> IOExceptionHandler(IOException e){
+    public ResponseEntity<String> IOExceptionHandler(IOException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
     }
 }
