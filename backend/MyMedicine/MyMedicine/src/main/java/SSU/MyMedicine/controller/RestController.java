@@ -1,5 +1,6 @@
 package SSU.MyMedicine.controller;
 
+import SSU.MyMedicine.DTO.CustomOAuth2User;
 import SSU.MyMedicine.VO.*;
 import SSU.MyMedicine.entity.Allergic;
 import SSU.MyMedicine.entity.Medicine;
@@ -12,12 +13,17 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @org.springframework.web.bind.annotation.RestController
@@ -70,6 +76,23 @@ public class RestController {
                     HttpStatus.UNAUTHORIZED, "Incorrect password");
     }
 
+    @PutMapping("/editUser")
+    public String editUser(@RequestBody UserEditVO userEditVO){
+        User user = userService.findByUid(userEditVO.getUID());
+
+        if (!userEditVO.getAllergicList().isEmpty())
+            allergicService.saveIfNotThere(userEditVO.getAllergicList());
+
+        List<Allergic> allergicList = new ArrayList<>();
+        for (String allergicInfo : userEditVO.getAllergicList()) {
+            Allergic addAllergic = allergicService.findByInfo(allergicInfo);
+            allergicList.add(addAllergic);
+        }
+
+        user.setAllergicList(allergicList);
+        userService.save(user);
+        return user.toString();
+    }
     @GetMapping("/getUserInfo")
     public GetUserInfoVO getAllergic(@RequestParam("uID") Integer uID) {
         User foundUser = userService.findByUid(uID);
@@ -146,6 +169,37 @@ public class RestController {
 //        String email = SecurityContextHolder.getContext().getAuthentication().getName();
 //        return email;
 //    }
+
+    @GetMapping("/hello")
+    @ResponseBody
+    public String hello(){
+        return "hello there";
+    }
+
+    @GetMapping("/user/welcome")
+    public String userWelcome(@AuthenticationPrincipal CustomOAuth2User customOAuth2User) {
+        String name = null;
+        return "Current user: " + customOAuth2User.getUsername();
+        // Google의 경우
+//        if (principal.getAttribute("name") != null) {
+//            name = principal.getAttribute("name");
+//        }
+//        // Kakao의 경우
+//        else if (principal.getAttribute("properties") != null) {
+//            Map<String, Object> properties = principal.getAttribute("properties");
+//            name = (String) properties.get("nickname");
+//        }
+//
+//        if (name == null) {
+//            name = "Guest";
+//        }
+//
+//        return name + " welcome!";
+    }
+    @GetMapping("/login/google")
+    public String google(){
+        return "logged in";
+    }
 
     @GetMapping("/status")
     public ResponseEntity<String> alive() {
