@@ -38,5 +38,6 @@ public class User {
     private List<Medicine> medicineList = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    @OrderBy("regDate desc")
     private List<Prescription> prescList = new ArrayList<>();
 }

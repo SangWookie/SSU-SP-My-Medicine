@@ -170,12 +170,6 @@ public class RestController {
 //        return email;
 //    }
 
-    @GetMapping("/hello")
-    @ResponseBody
-    public String hello(){
-        return "hello there";
-    }
-
     @GetMapping("/user/welcome")
     public String userWelcome(@AuthenticationPrincipal CustomOAuth2User customOAuth2User) {
         String name = null;
@@ -195,10 +189,6 @@ public class RestController {
 //        }
 //
 //        return name + " welcome!";
-    }
-    @GetMapping("/login/google")
-    public String google(){
-        return "logged in";
     }
 
     @GetMapping("/status")
