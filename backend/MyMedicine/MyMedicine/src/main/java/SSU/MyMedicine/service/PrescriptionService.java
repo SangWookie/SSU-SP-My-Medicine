@@ -76,6 +76,7 @@ public class PrescriptionService {
                 .user(prescUser)
                 .build();
 
+        userService.saveMedicine(prescUser,medicineList);
         return prescriptionRepository.save(newPresc);
     }
     @Async

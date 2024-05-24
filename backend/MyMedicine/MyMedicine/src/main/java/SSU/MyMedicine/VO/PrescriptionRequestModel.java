@@ -1,5 +1,6 @@
 package SSU.MyMedicine.VO;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -17,4 +18,9 @@ public class PrescriptionRequestModel {
     private LocalDate regDate;
     private Integer duration;
     private List<String> medList;
+
+    @JsonProperty("uID")
+    public Integer getUID(){
+        return uID;
+    }
 }

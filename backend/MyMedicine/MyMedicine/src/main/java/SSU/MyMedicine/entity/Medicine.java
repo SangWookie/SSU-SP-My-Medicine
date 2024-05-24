@@ -16,11 +16,14 @@ public class Medicine {
     @Column(name = "mid")
     private Integer mid;
 
-    @Column(name = "med_name")
+    @Column(name = "med_name", unique = true)
     private String medName;
 
     @Column(name = "med_comp")
     private String medComp;
+
+    @Column(name = "med_group")
+    private String medGroup;
 
     @Column(name = "warning")
     private String warning;

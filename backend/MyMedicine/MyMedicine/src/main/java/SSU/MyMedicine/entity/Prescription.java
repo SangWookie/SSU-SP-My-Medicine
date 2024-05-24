@@ -3,6 +3,7 @@ package SSU.MyMedicine.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.core.annotation.Order;
 
 import java.time.LocalDate;
 import java.util.List;

@@ -22,7 +22,7 @@ public class User {
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
-    @Column(name = "password", nullable = false)
+    @Column(name = "password", nullable = true)
     private String password;
 
     @ManyToMany(fetch = FetchType.LAZY)
@@ -31,6 +31,13 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "aid"))
     private List<Allergic> allergicList = new ArrayList<>();
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "user_medicine",
+            joinColumns = @JoinColumn(name = "uid"),
+            inverseJoinColumns = @JoinColumn(name = "mid"))
+    private List<Medicine> medicineList = new ArrayList<>();
+
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    @OrderBy("regDate desc")
     private List<Prescription> prescList = new ArrayList<>();
 }
