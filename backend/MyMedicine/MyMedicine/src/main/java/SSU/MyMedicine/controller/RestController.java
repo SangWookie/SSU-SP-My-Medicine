@@ -9,7 +9,9 @@ import SSU.MyMedicine.entity.User;
 import SSU.MyMedicine.service.AllergicService;
 import SSU.MyMedicine.service.PrescriptionService;
 import SSU.MyMedicine.service.UserService;
+import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,10 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @org.springframework.web.bind.annotation.RestController
 public class RestController {
@@ -42,8 +41,7 @@ public class RestController {
     @PostMapping("/signup")
     public String signup(@RequestBody UserVO userVO) {
         if (userService.existByName(userVO.getUsername()))
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Username Already Exist");
+            throw new EntityExistsException("Username Already Exist");
 
         // allergy exists
         if (!userVO.getAllergicList().isEmpty())
@@ -62,19 +60,17 @@ public class RestController {
         return user.toString();
     }
 
-    @PostMapping("/login")
-    public Integer login(@RequestBody LoginVO user) {
-        User findUser = userService.findByName(user.getUsername());
-        if (findUser == null)
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Username not found");
-
-        if (userService.authUser(user))
-            return findUser.getUid();
-        else
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED, "Incorrect password");
-    }
+//    @PostMapping("/login")
+//    public Integer login(@RequestBody LoginVO user) {
+//        User findUser = userService.findByName(user.getUsername());
+//        if (findUser == null)
+//            throw new EntityNotFoundException("Username not found");
+//
+//        if (userService.authUser(user))
+//            return findUser.getUid();
+//        else
+//            throw new SecurityException("Incorrect password");
+//    }
 
     @PutMapping("/editUser")
     public String editUser(@RequestBody UserEditVO userEditVO){
@@ -164,11 +160,13 @@ public class RestController {
         return ResponseEntity.ok("Prescription deleted with pid : " + pID);
     }
 
-//    @GetMapping("/")
-//    public String mainPage() {
+    @GetMapping("/")
+    public String mainPage(@AuthenticationPrincipal CustomOAuth2User customOAuth2User) {
 //        String email = SecurityContextHolder.getContext().getAuthentication().getName();
 //        return email;
-//    }
+        String name = null;
+        return "Current user: " + customOAuth2User.getUsername();
+    }
 
     @GetMapping("/user/welcome")
     public String userWelcome(@AuthenticationPrincipal CustomOAuth2User customOAuth2User) {
@@ -196,6 +194,26 @@ public class RestController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);    //status 204
     }
 
+    @PostMapping("/error")
+    public Map<String, Object> handleError(HttpServletRequest request) {
+        Map<String, Object> result = new HashMap<>();
+        Map<String, String> headers = Collections.list(request.getHeaderNames())
+                .stream()
+                .collect(HashMap::new, (m,v)->m.put(v, request.getHeader(v)), HashMap::putAll);
+
+        Map<String, String> cookies = new HashMap<>();
+        if (request.getCookies() != null) {
+            for (var cookie : request.getCookies()) {
+                cookies.put(cookie.getName(), cookie.getValue());
+            }
+        }
+
+        result.put("headers", headers);
+        result.put("cookies", cookies);
+
+        return result;
+    }
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<String> entityNotFoundExceptionHandler(EntityNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
@@ -204,5 +222,15 @@ public class RestController {
     @ExceptionHandler(IOException.class)
     public ResponseEntity<String> IOExceptionHandler(IOException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+    }
+
+    @ExceptionHandler(EntityExistsException.class)
+    public ResponseEntity<String> EntityExistsExceptionHandler(EntityExistsException e){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<String> SecurityExceptionHandler(SecurityException e){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
     }
 }

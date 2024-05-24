@@ -15,7 +15,6 @@ public class CustomOAuth2User implements OAuth2User {
     public CustomOAuth2User(UserDTO userDTO) {
         this.userDTO = userDTO;
     }
-
     @Override
     public Map<String, Object> getAttributes() {
         return null;
