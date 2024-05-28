@@ -1,10 +1,12 @@
 package SSU.MyMedicine.oauth2;
 
 import SSU.MyMedicine.DAO.RefreshTokenRepository;
+import SSU.MyMedicine.DAO.UserRepository;
 import SSU.MyMedicine.DTO.CustomOAuth2User;
 import SSU.MyMedicine.DTO.CustomUserDetails;
 import SSU.MyMedicine.entity.RefreshTokenEntity;
 import SSU.MyMedicine.jwt.JWTUtil;
+import SSU.MyMedicine.service.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,10 +28,12 @@ import java.util.Iterator;
 public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     private final JWTUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserService userRepository;
 
-    public CustomSuccessHandler(JWTUtil jwtUtil, RefreshTokenRepository refreshTokenRepository) {
+    public CustomSuccessHandler(JWTUtil jwtUtil, RefreshTokenRepository refreshTokenRepository, UserService userRepository1) {
         this.jwtUtil = jwtUtil;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.userRepository = userRepository1;
     }
 
     @Override
@@ -52,7 +56,7 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         GrantedAuthority auth = iterator.next();
         String role = auth.getAuthority();
 
-        String access = jwtUtil.createJwt("access", username, role, 600000L); // 10 min
+        String access = jwtUtil.createJwt("access", username, role, 24 * 3600000L); // 10 min 600000L
         String refresh = jwtUtil.createJwt("refresh", username, role, 24 * 3600000L); // 24 hours
 
         //Refresh 토큰 저장
@@ -61,8 +65,8 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         response.addHeader("access", access);
         response.addCookie(createCookie("refresh", refresh));
         response.setStatus(HttpStatus.OK.value());
-//        SecurityContextHolder.getContext().setAuthentication(authentication);
-        response.sendRedirect("http://localhost:8080/status");
+        response.setHeader("uID", userRepository.findByName(username).getUid().toString());
+//        response.sendRedirect("http://localhost:8080/hello");
     }
 
     private void addRefreshEntity(String username, String refresh, Long expiredMs) {

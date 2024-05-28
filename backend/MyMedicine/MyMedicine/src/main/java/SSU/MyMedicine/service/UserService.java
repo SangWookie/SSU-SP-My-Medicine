@@ -1,5 +1,6 @@
 package SSU.MyMedicine.service;
 
+import SSU.MyMedicine.DAO.PrescriptionRepository;
 import SSU.MyMedicine.DAO.UserRepository;
 import SSU.MyMedicine.VO.LoginVO;
 import SSU.MyMedicine.VO.UserVO;
@@ -22,12 +23,14 @@ public class UserService {
     private final UserRepository userRepository;
 
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final PrescriptionRepository prescriptionRepository;
 
 
     @Autowired
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder bCryptPasswordEncoder) {
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder bCryptPasswordEncoder, PrescriptionRepository prescriptionRepository) {
         this.userRepository = userRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.prescriptionRepository = prescriptionRepository;
     }
 
 //    public User findById(long pid) {
@@ -101,5 +104,12 @@ public class UserService {
     public void saveMedicine(User user, List<Medicine> medicineList){
         user.setMedicineList(medicineList);
         userRepository.save(user);
+    }
+
+    public User findUserByPID(Integer pid){
+        Prescription prescription = prescriptionRepository.findByPid(pid);
+        if (prescription == null)
+            return null;
+        return prescription.getUser();
     }
 }
