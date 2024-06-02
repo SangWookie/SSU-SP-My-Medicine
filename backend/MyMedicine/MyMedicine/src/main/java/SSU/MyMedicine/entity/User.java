@@ -2,7 +2,9 @@ package SSU.MyMedicine.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.apache.commons.lang3.builder.ToStringExclude;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +27,16 @@ public class User {
     @Column(name = "password", nullable = true)
     private String password;
 
+    private String nickname;
+
+    private LocalDate birthDate;
+
+    private String gender;
+
+    private Double height;
+
+    private Double weight;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_alergic",
             joinColumns = @JoinColumn(name = "uid"),
@@ -37,6 +49,7 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "mid"))
     private List<Medicine> medicineList = new ArrayList<>();
 
+    @ToString.Exclude
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     @OrderBy("regDate desc")
     private List<Prescription> prescList = new ArrayList<>();
