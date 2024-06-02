@@ -29,7 +29,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     private static final String USERNAME_KEY = "username"; // 회원 로그인 시 이메일 요청 JSON Key : "email"
     private static final String PASSWORD_KEY = "password"; // 회원 로그인 시 비밀번호 요청 JSon Key : "password"
     private static final AntPathRequestMatcher DEFAULT_LOGIN_PATH_REQUEST_MATCHER =
-            new AntPathRequestMatcher(DEFAULT_LOGIN_REQUEST_URL, HTTP_METHOD); // "/login" + POST로 온 요청에 매칭된다.
+            new AntPathRequestMatcher(DEFAULT_LOGIN_REQUEST_URL); // "/login" + POST로 온 요청에 매칭된다.
     private final AuthenticationManager authenticationManager;
     private final JWTUtil jwtUtil;
     private final CustomSuccessHandler customSuccessHandler;

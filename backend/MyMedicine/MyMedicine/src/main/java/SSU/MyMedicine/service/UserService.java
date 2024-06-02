@@ -50,14 +50,18 @@ public class UserService {
             throw new EntityExistsException("Member with name '" + user.getUsername() + "' already exists.");
         }
 
-        User userEntity = User.builder()
+        return User.builder()
                 .name(user.getUsername())
                 .password(bCryptPasswordEncoder.encode(user.getPassword()))
+                .nickname(user.getNickname())
+                .birthDate(user.getBirthDate())
+                .gender(user.getGender())
+                .height(user.getHeight())
+                .weight(user.getWeight())
                 .build();
-
-        return userEntity;
     }
 
+    @Transactional
     public User save(User user) {
         return userRepository.save(user);
     }

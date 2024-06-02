@@ -7,12 +7,14 @@ import SSU.MyMedicine.entity.Medicine;
 import SSU.MyMedicine.entity.Prescription;
 import SSU.MyMedicine.entity.User;
 import SSU.MyMedicine.service.AllergicService;
+import SSU.MyMedicine.service.MedicineService;
 import SSU.MyMedicine.service.PrescriptionService;
 import SSU.MyMedicine.service.UserService;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import net.bytebuddy.asm.Advice;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,11 +36,13 @@ public class RestController {
     private final UserService userService;
     private final AllergicService allergicService;
     private final PrescriptionService prescriptionService;
+    private final MedicineService medicineService;
 
-    public RestController(UserService userService, AllergicService allergicService, PrescriptionService prescriptionService) {
+    public RestController(UserService userService, AllergicService allergicService, PrescriptionService prescriptionService, MedicineService medicineService) {
         this.userService = userService;
         this.allergicService = allergicService;
         this.prescriptionService = prescriptionService;
+        this.medicineService = medicineService;
     }
 
     @PostMapping("/signup")
@@ -76,7 +80,8 @@ public class RestController {
 //    }
 
     @PutMapping("/editUser")
-    public String editUser(@RequestBody UserEditVO userEditVO){
+//    @Transactional
+    public ResponseEntity<String> editUser(@RequestBody UserEditVO userEditVO) {
         User user = userService.findByUid(userEditVO.getUID());
 
         if (!userEditVO.getAllergicList().isEmpty())
@@ -89,9 +94,15 @@ public class RestController {
         }
 
         user.setAllergicList(allergicList);
+        user.setNickname(userEditVO.getNickname());
+        user.setBirthDate(userEditVO.getBirthDate());
+        user.setGender(userEditVO.getGender());
+        user.setHeight(userEditVO.getHeight());
+        user.setWeight(userEditVO.getWeight());
         userService.save(user);
-        return user.toString();
+        return ResponseEntity.ok("edit complete");
     }
+
     @GetMapping("/getUserInfo")
     public GetUserInfoVO getAllergic(@RequestParam("uID") Integer uID) {
         User foundUser = userService.findByUid(uID);
@@ -122,6 +133,10 @@ public class RestController {
         Prescription prescription = prescriptionService.findByPid(pID);
         List<Medicine> medicineList = prescription.getMedList();
 
+        for (Medicine medicine : medicineList) {
+            medicineService.generateMedComp(medicine);
+        }
+
         // 요청 처방건의 주인 User
         User user = userService.findUserByPID(pID);
         if (user == null)
@@ -137,21 +152,19 @@ public class RestController {
         List<String> dupMedList = new ArrayList<>();
         for (Prescription p : prescriptionList) {
             // 동일한 Prescription은 검사하지 않음
-            if(!Objects.equals(prescription.getPid(), p.getPid())){
+            if (!Objects.equals(prescription.getPid(), p.getPid())) {
                 LocalDate st = p.getRegDate();
                 LocalDate ed = st.plusDays(p.getDuration());
                 // 겹치는 날짜가 하나도 없으면
-                if(edDate.isBefore(st) || stDate.isAfter(ed)){
+                if (edDate.isBefore(st) || stDate.isAfter(ed)) {
                     continue;
-                }
-                else {
+                } else {
                     // 처방전에 있는 mID 중 성분 겹치는 거 dupMedList에 추가
                     for (Medicine medPresc : medicineList) {
                         for (Medicine medUser : p.getMedList()) {
-                            if (!Objects.equals(medUser.getMid(), medPresc.getMid())) {
-                                if (Objects.equals(medUser.getMedGroup(), medPresc.getMedGroup())) {
-                                    dupMedList.add(medUser.getMedName());
-                                }
+                            if (Objects.equals(medUser.getMedGroup(), medPresc.getMedGroup())) {
+                                dupMedList.add(medUser.getMedName());
+                                dupMedList.add(medPresc.getMedName());
                             }
                         }
                     }
@@ -164,9 +177,9 @@ public class RestController {
 
         // 사용자의 알러지와 겹치는 약 성분 검사
         List<String> allergicMedList = new ArrayList<>();
-        for(Medicine prescMed : medicineList){
-            for(Allergic allergic : user.getAllergicList()){
-                if(Objects.equals(allergic.getInfo(), prescMed.getMedComp())){
+        for (Medicine prescMed : medicineList) {
+            for (Allergic allergic : user.getAllergicList()) {
+                if (Objects.equals(allergic.getInfo(), prescMed.getMedComp())) {
                     allergicMedList.add(prescMed.getMedName());
                 }
             }
@@ -226,9 +239,9 @@ public class RestController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);    //status 204
     }
 
-    @GetMapping("/hello")
-    public String hello(){
-        return "hello world!";
+    @PostMapping("/error")
+    public ResponseEntity<String> error(HttpServletRequest request){
+        return ResponseEntity.ok("");
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
@@ -242,17 +255,17 @@ public class RestController {
     }
 
     @ExceptionHandler(EntityExistsException.class)
-    public ResponseEntity<String> EntityExistsExceptionHandler(EntityExistsException e){
+    public ResponseEntity<String> EntityExistsExceptionHandler(EntityExistsException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
     }
 
     @ExceptionHandler(SecurityException.class)
-    public ResponseEntity<String> SecurityExceptionHandler(SecurityException e){
+    public ResponseEntity<String> SecurityExceptionHandler(SecurityException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<String> MissingServletRequestParameterExceptionHandler(MissingServletRequestParameterException e){
+    public ResponseEntity<String> MissingServletRequestParameterExceptionHandler(MissingServletRequestParameterException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
     }
 }

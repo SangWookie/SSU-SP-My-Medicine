@@ -17,6 +17,7 @@ public class AllergicService {
     public Allergic findByInfo(String info){
         return allergicRepository.findByInfo(info);
     }
+
     public String saveIfNotThere(List<String> allergicStrings) {
         if (allergicStrings.isEmpty())
             return "empty input";
