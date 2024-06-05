@@ -32,7 +32,7 @@ public class MedicineService {
             if (!medicineRepository.existsByMedName(medicineStr)) {
                 Medicine newAllergic = new Medicine().builder()
                         .medName(medicineStr)
-                        .medComp(medicineStr)
+                        .medComp("성분 분석중")
                         .build();
                 medicineRepository.save(newAllergic);
                 self.generateWarning(newAllergic);
@@ -65,13 +65,14 @@ public class MedicineService {
         int groupNum = Character.getNumericValue(c);
 
         String medComp = switch (groupNum) {
+            case 0 -> "기타의약품";
             case 1 -> "페니실린계 항생제";
             case 2 -> "세팔로스포린계 항생제";
             case 3 -> "소염진통제";
             case 4 -> "해열진통제";
             case 5 -> "위장보호제";
             case 6 -> "항히스타민제";
-            case 7 -> "기타의약품";
+            case 7 -> "퀴놀론계 항생제";
             default -> "기타의약품";
         };
 
@@ -88,14 +89,16 @@ public class MedicineService {
                 "4 : 해열진통제\n" +
                 "5 : 위장보호제\n" +
                 "6 : 항히스타민제\n" +
-                "7 : 위 6개에 속하지 않는 기타의약품들\n" +
+                "7 : 퀴놀론계 항생제\n" +
+                "0 : 위 6개에 속하지 않는 기타의약품들\n" +
                 "NSAIDs 종류는 모두 분류'3' 소염진통제이고 예시로는 펠루비프로펜(펠루비정), 이부프로펜, 덱시부프로펜이 있어.\n" +
                 "타이레놀같은 아세타미노펜은 해열진통제로 분류해줘. 항히스타민제의 예로는 씨잘정(레보세티리진), 지르텍정(세티리진) 이 있어.\n" +
                 "분류 '1'인 페니실린계 항생제로는(아목시실린)가 있어. 분류 '2'인 세팔로스포린계 항생제러는(세프라딘, 세파클러)가 있어.\n" +
                 "분류 '5'인 위장보호제에는 (가스티인정, 가스모틴정) 이 있어. 모스드프리드는 모두 위장보호제야. 란시드캡슐 또한 란소프라졸로써, 위장보호제로 판별해줘.\n" +
-                "1~6에 속하지 않는 의약품은 기타의약품으로, 7이라고 응답해줘.\n" +
+                "분류 '7'인 퀴놀론계 항생제에는 (시프로플록사신)이 있어." +
+                "1~7에 속하지 않는 의약품은 기타의약품으로, 0이라고 응답해줘.\n" +
                 "예를들어, 요청할 의약품명이 세프라딘캡슐 일 경우, 너가 보낼 응답은 오직 2 숫자 하나야.\n" +
-                "너에게 요청할 의약품명 : "+ medicine.getMedComp();
+                "너에게 요청할 의약품명 : "+ medicine.getMedName();
         String response = openAIService.runAPI(promptHeader);
         medicine.setMedGroup(response);
         medicineRepository.save(medicine);
