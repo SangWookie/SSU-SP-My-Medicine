@@ -213,11 +213,11 @@ public class RestController {
         return "Current user: " + customOAuth2User.getUsername();
     }
 
-    @GetMapping("/user/welcome")
-    public String userWelcome(@AuthenticationPrincipal CustomOAuth2User customOAuth2User) {
-        String name = null;
-        return "Current user: " + customOAuth2User.getUsername();
-        // Google의 경우
+//    @GetMapping("/user/welcome")
+//    public String userWelcome(@AuthenticationPrincipal CustomOAuth2User customOAuth2User) {
+//        String name = null;
+//        return "Current user: " + customOAuth2User.getUsername();
+//        // Google의 경우
 //        if (principal.getAttribute("name") != null) {
 //            name = principal.getAttribute("name");
 //        }
@@ -232,7 +232,7 @@ public class RestController {
 //        }
 //
 //        return name + " welcome!";
-    }
+//    }
 
     @GetMapping("/status")
     public ResponseEntity<String> alive() {
@@ -240,7 +240,7 @@ public class RestController {
     }
 
     @PostMapping("/error")
-    public ResponseEntity<String> error(HttpServletRequest request){
+    public ResponseEntity<String> error(HttpServletRequest request) {
         return ResponseEntity.ok("");
     }
 
