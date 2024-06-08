@@ -40,7 +40,7 @@ public class PrescriptionService {
     @Value("${upload.path}")
     private String uploadPath;
 
-    @Transactional
+//    @Transactional
     public Prescription save(PrescriptionRequestModel model) throws IOException {
         // save image
         Random random = new Random();
@@ -79,6 +79,7 @@ public class PrescriptionService {
         userService.saveMedicine(prescUser,medicineList);
         return prescriptionRepository.save(newPresc);
     }
+
     @Async
     public void runImageWarpingPy(String imageFileName) throws IOException {
         int lastDotIndex = imageFileName.lastIndexOf('.');
