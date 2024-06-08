@@ -41,6 +41,7 @@ public class PrescInfo {
             this.medicine.add(medicineVO);
             if (med.getWarning() != null)
                 this.generatedInstruction = this.generatedInstruction.concat(med.getWarning() + '\n');
+            this.generatedInstruction = this.generatedInstruction.replace('\r', '\n');
         }
     }
 }

@@ -148,29 +148,33 @@ public class RestController {
         // Prescription List 순회하여 regDate + duration 검사해서
         // 겹치면 그룹 겹치는 약 검사해서 dupMedList에 넣기
         LocalDate stDate = prescription.getRegDate();
-        LocalDate edDate = stDate.plusDays(prescription.getDuration());
+        LocalDate edDate = stDate.plusDays(prescription.getDuration() - 1);
         List<String> dupMedList = new ArrayList<>();
-        for (Prescription p : prescriptionList) {
-            // 동일한 Prescription은 검사하지 않음
-            if (!Objects.equals(prescription.getPid(), p.getPid())) {
-                LocalDate st = p.getRegDate();
-                LocalDate ed = st.plusDays(p.getDuration());
-                // 겹치는 날짜가 하나도 없으면
-                if (edDate.isBefore(st) || stDate.isAfter(ed)) {
+        if (!LocalDate.now().isAfter(edDate))
+            for (Prescription p : prescriptionList) {
+                if (p.getRegDate().plusDays(p.getDuration()).isBefore(LocalDate.now()))
                     continue;
-                } else {
-                    // 처방전에 있는 mID 중 성분 겹치는 거 dupMedList에 추가
-                    for (Medicine medPresc : medicineList) {
-                        for (Medicine medUser : p.getMedList()) {
-                            if (Objects.equals(medUser.getMedGroup(), medPresc.getMedGroup())) {
-                                dupMedList.add(medUser.getMedName());
-                                dupMedList.add(medPresc.getMedName());
+                // 동일한 Prescription은 검사하지 않음
+                if ((!Objects.equals(prescription.getPid(), p.getPid())) &&
+                        !(p.getRegDate().plusDays(p.getDuration()).isBefore(LocalDate.now()))) {
+                    LocalDate st = p.getRegDate();
+                    LocalDate ed = st.plusDays(p.getDuration());
+                    // 겹치는 날짜가 하나도 없으면
+                    if (edDate.isBefore(st) || stDate.isAfter(ed)) {
+                        continue;
+                    } else {
+                        // 처방전에 있는 mID 중 성분 겹치는 거 dupMedList에 추가
+                        for (Medicine medPresc : medicineList) {
+                            for (Medicine medUser : p.getMedList()) {
+                                if (Objects.equals(medUser.getMedGroup(), medPresc.getMedGroup())) {
+                                    dupMedList.add(medUser.getMedName());
+                                    dupMedList.add(medPresc.getMedName());
+                                }
                             }
                         }
                     }
                 }
             }
-        }
         // 중복 제거 로직
         Set<String> dupRemove = new HashSet<>(dupMedList);
         List<String> dupMed = new ArrayList<>(dupRemove);
