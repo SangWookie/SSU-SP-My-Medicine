@@ -87,24 +87,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final ApiService _apiService = ApiService();
   List<String> selectedAllergies = [];
   List<String> allAllergies = [
-    '알러지1',
-    '알러지2',
-    '알러지3',
-    '알러지4',
-    '알러지5',
-    '알러지6',
-    '알러지7',
-    '알러지8',
-    '알러지9',
-    '알러지10',
-    '알러지11',
-    '알러지12',
-    '알러지13',
-    '알러지14',
-    '알러지15',
-    '알러지16',
-    '알러지17',
-    '알러지18',
+    "페니실린",
+    "집먼지진드기",
+    "계란",
+    "우유",
+    "복숭아",
+    "견과류",
+    "꽃가루",
   ];
 
   bool showOtherTextField = true; // Display text field initially

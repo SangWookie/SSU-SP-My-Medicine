@@ -77,17 +77,15 @@ class ApiService {
 //유저정보 조회
   Future<UserModel> getUserInfo(int uid) async {
     final url = Uri.http(baseUrl, '/getUserInfo', {'uID': '$uid'});
-    log(url.toString());
     final response = await http.get(url);
     log("/getUserInfo: <${response.statusCode}>, <${response.body}>");
     if (response.statusCode == 200) {
-      final resData = jsonDecode(response.body);
-      log(resData.toString());
-
-      final userData = UserModel.fromJson(resData[0]);
+      final Map<String, dynamic> responseData =
+          jsonDecode(utf8.decode(response.bodyBytes));
+      final UserModel userData = UserModel.fromJson(responseData);
       return userData;
     }
-    throw Error();
+    throw Exception('Failed to load user information');
   }
 
 //처방전 리스트 조회
@@ -167,13 +165,19 @@ class ApiService {
 
   // 처방건 삭제
   Future<void> deletePrescription(int prescriptionId) async {
-    final url = Uri.http(baseUrl, '/delPresc', {'pID': '$prescriptionId'});
-    final response = await http.delete(url);
-    if (response.statusCode == 204) {
-      log("Prescription deleted successfully.");
-      return;
+    try {
+      final url = Uri.http(baseUrl, '/delPresc', {'pID': '$prescriptionId'});
+      final response = await http.delete(url);
+      if (response.statusCode == 200) {
+        log("처방전이 성공적으로 삭제되었습니다.");
+        return;
+      } else {
+        log("처방전 삭제에 실패했습니다. 상태 코드: ${response.statusCode}");
+        throw Exception('처방전 삭제에 실패했습니다.');
+      }
+    } catch (e) {
+      log("처방전 삭제 중 오류 발생: $e");
+      throw e;
     }
-    log("Failed to delete prescription: ${response.statusCode}");
-    throw Error();
   }
 }

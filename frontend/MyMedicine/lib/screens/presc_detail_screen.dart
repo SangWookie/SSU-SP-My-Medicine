@@ -3,12 +3,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:medicineapp/models/prescription_model.dart';
+import 'package:medicineapp/services/api_services.dart';
 // import 'package:medicineapp/widgets/bottom_modal_sheet.dart';
 
 class PrescDetailScreen extends StatelessWidget {
   // final int uid, prescId;
   final PrescModel prescModel;
-
+  final ApiService _apiService = ApiService();
   PrescDetailScreen({
     super.key,
     // required this.uid,
@@ -36,6 +37,32 @@ class PrescDetailScreen extends StatelessWidget {
     return url;
   }
 
+/////////////////////////////////////////////////////
+  // 삭제 함수 정의
+  Future<void> _deletePrescription(
+      BuildContext context, int prescriptionId) async {
+    try {
+      await _apiService.deletePrescription(prescriptionId);
+      // 성공적으로 삭제되면 알림을 띄웁니다.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('처방전이 성공적으로 삭제되었습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      // 삭제 후 화면을 갱신할 수 있는 로직을 추가할 수 있습니다.
+    } catch (e) {
+      // 실패 시 에러 메시지를 띄웁니다.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('처방전 삭제 중 오류가 발생했습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+///////////////////////////////////////////////////
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,9 +79,40 @@ class PrescDetailScreen extends StatelessWidget {
               const Text('처방전 상세정보'),
               Row(
                 children: [
-                  Icon(Icons.edit, color: Colors.grey[700], size: 30),
-                  const SizedBox(width: 3, height: 1),
-                  Icon(Icons.delete_rounded, color: Colors.grey[700], size: 30),
+                  //Icon(Icons.edit, color: Colors.grey[700], size: 30),
+                  //const SizedBox(width: 3, height: 1),
+                  //Icon(Icons.delete_rounded, color: Colors.grey[700], size: 30),
+                  GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text("처방전 삭제"),
+                            content: Text("이 처방전을 삭제하시겠습니까?"),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text("취소"),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  _deletePrescription(
+                                      context, prescModel.prescIdValue);
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text("삭제"),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    child: Icon(Icons.delete_rounded,
+                        color: Colors.grey[700], size: 30),
+                  ),
                 ],
               )
             ],

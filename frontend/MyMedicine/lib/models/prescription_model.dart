@@ -5,6 +5,9 @@ class PrescModel {
   final String regDate;
   final int prescPeriodDays;
   final List<String> medicineList;
+  final List<String> medcompList;
+  final List<String>? duplicateMed;
+  final List<String>? allergicMed;
   final int prescId;
   final String generatedInstruction;
 
@@ -12,6 +15,9 @@ class PrescModel {
     required this.regDate,
     required this.prescPeriodDays,
     required this.medicineList,
+    required this.medcompList,
+    required this.duplicateMed,
+    required this.allergicMed,
     required this.prescId,
     required this.generatedInstruction,
   });
@@ -53,6 +59,17 @@ class PrescModel {
         // medicineList = json['medicine'].toString().split(',').reversed.toList(),
         medicineList =
             List<String>.from(json['medicine'].map((item) => item['medName'])),
+        medcompList =
+            List<String>.from(json['medicine'].map((item) => item['medComp'])),
+        duplicateMed = json['duplicateMed'] != null
+            ? List<String>.from(
+                json['duplicateMed'].map((item) => item.toString()))
+            : null,
+        allergicMed = json['allergicMed'] != null
+            ? List<String>.from(
+                json['allergicMed'].map((item) => item.toString()))
+            : null,
+
         // medicineList =
         //     List<String>.from(json['medicine'].map((item) => item['medName'])),
         generatedInstruction = json['generatedInstruction'],

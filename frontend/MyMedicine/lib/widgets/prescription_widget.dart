@@ -43,6 +43,7 @@ class PrescWidget extends StatelessWidget {
             child: CircularProgressIndicator(),
           );
         } else if (snapshot.hasError) {
+          log("widget error: ${snapshot.error}");
           return Center(
             child: Text('Error: ${snapshot.error}'),
           );
