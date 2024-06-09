@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
-
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,6 +10,7 @@ import 'package:medicineapp/screens/presc_list_screen.dart';
 import 'package:medicineapp/services/api_services.dart';
 import 'package:medicineapp/widgets/toast.dart';
 import 'package:persistent_bottom_nav_bar/persistent_tab_view.dart';
+import 'package:medicineapp/screens/home_screen.dart';
 
 class PrescUploadScreen extends StatefulWidget {
   final int uid;
@@ -74,24 +75,43 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
   }
 
   void _pickImage() async {
-    final pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
-    );
-    setState(() {
-      _image = pickedFile;
-    });
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+      );
+      setState(() {
+        _image = pickedFile;
+      });
+    } catch (e) {
+      log("Image picking failed: $e");
+      // 이미지를 다시 업로드하기 위해 재귀 호출
+      _pickImage(); // 재귀 호출
+    }
   }
 
   void validateAndSubmit(BuildContext context) async {
     String medicineList = _fetchMedicineList();
-    if (_prescDaysController.text.isEmpty) {
-      showToast("복용일수를 입력해주세요");
+
+    bool isInteger(String value) {
+      if (value == null) {
+        return false;
+      }
+      final number = int.tryParse(value);
+      return number != null;
+    }
+
+    if (_prescDaysController.text.isEmpty ||
+        !isInteger(_prescDaysController.text)) {
+      showToast("복용일수를 올바르게 입력해주세요");
       return;
     }
     if (_regYearController.text.isEmpty ||
         _regMonthController.text.isEmpty ||
-        _regDateController.text.isEmpty) {
-      showToast("처방일자를 모두 입력해주세요");
+        _regDateController.text.isEmpty ||
+        !isInteger(_regYearController.text) ||
+        !isInteger(_regMonthController.text) ||
+        !isInteger(_regDateController.text)) {
+      showToast("처방일자를 올바르게 입력해주세요");
       return;
     }
     if (medicineList.isEmpty) {
@@ -104,7 +124,6 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
       return;
     }
 
-    // Combine year, month, and date into a single string
     String prescriptionDate =
         "${_regYearController.text}-${_regMonthController.text.padLeft(2, '0')}-${_regDateController.text.padLeft(2, '0')}";
 
@@ -120,13 +139,56 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
 
     if (uploadResult != -1) {
       showToast("처방전이 등록되었습니다.");
-      widget.func(context);
+      //홈화면으로 나가기
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final homeScreen = context.findAncestorWidgetOfExactType<HomeScreen>();
+        if (homeScreen != null) {
+          homeScreen.setIndex(0, context);
+        }
+      });
+      _clearInputs();
+    } else {
+      showToast("처방전 등록에 실패했습니다.");
     }
+  }
+
+  void _clearInputs() {
+    _prescDaysController.clear();
+    _regYearController.clear();
+    _regMonthController.clear();
+    _regDateController.clear();
+    _controllers.forEach((controller) => controller.clear());
+    setState(() {
+      _image = null;
+    });
+  }
+
+  Future<Uint8List> _resizeAndCompressImage(Uint8List imageBytes) async {
+    // 이미지 디코딩
+    img.Image? image = img.decodeImage(imageBytes);
+    if (image == null) return imageBytes;
+
+    // 이미지 크기 조정 (예: 최대 너비 800픽셀, 높이는 비율 유지)
+    int maxWidth = 500;
+    int newWidth = maxWidth;
+    int newHeight = (maxWidth / image.width * image.height).round();
+    img.Image resizedImage =
+        img.copyResize(image, width: newWidth, height: newHeight);
+
+    // 이미지 압축 (품질: 0-100, 100이 가장 높은 품질)
+    int compressionQuality = 50;
+    List<int> compressedBytes =
+        img.encodeJpg(resizedImage, quality: compressionQuality);
+
+    return Uint8List.fromList(compressedBytes);
   }
 
   Future<int> _uploadPresc(int uid, String prescriptionDate, int duration,
       String medList, XFile img) async {
     final imgBytes = await img.readAsBytes();
+
+    final resizedImgBytes = await _resizeAndCompressImage(imgBytes);
 
     // API 호출을 위한 매개변수 설정
     final String formattedDate = prescriptionDate;
@@ -150,27 +212,23 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
       appBar: AppBar(
         title: Container(
           padding: const EdgeInsets.only(
-            bottom: 1,
+            left: 12,
+            right: 0,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              IconButton(
-                onPressed: () => {
-                  PersistentNavBarNavigator.pushNewScreen(
-                    context,
-                    screen: PrescListScreen(uid: widget.uid, func: widget.func),
-                  )
-                },
-                icon: Icon(Icons.arrow_back_sharp, color: Colors.grey[600]),
+              Text(
+                "처방전 업로드",
+                style: TextStyle(
+                  color: Colors.white,
+                ),
               ),
-              const Text('처방전 업로드'),
-              const SizedBox(width: 30, height: 1),
             ],
           ),
         ),
-        backgroundColor: Colors.white,
+        centerTitle: true,
+        backgroundColor: Colors.deepPurple[200],
         elevation: 5,
         shadowColor: Colors.grey[300],
       ),
@@ -190,115 +248,123 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          color: Colors.grey[900],
-                          size: 25,
-                        ),
-                        const SizedBox(width: 8, height: 1),
-                        const Text(
-                          "처방일자: ",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            color: Colors.grey[900],
+                            size: 20,
                           ),
-                        ),
-                        Container(
-                          width: 50,
-                          height: 30,
-                          alignment: Alignment.bottomCenter,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: TextField(
-                            controller: _regYearController,
-                            textAlign: TextAlign.center,
-                            textAlignVertical: TextAlignVertical.bottom,
-                            maxLines: 1,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              isDense: true,
-                              hintText: 'YYYY',
-                              hintStyle: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[400],
-                              ),
-                              contentPadding: const EdgeInsets.only(bottom: 4),
+                          const SizedBox(width: 8, height: 1),
+                          const Text(
+                            "처방일자: ",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ),
-                        const Text(
-                          "-",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Container(
-                          width: 30,
-                          height: 30,
-                          alignment: Alignment.bottomCenter,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: TextField(
-                            controller: _regMonthController,
-                            textAlign: TextAlign.center,
-                            textAlignVertical: TextAlignVertical.bottom,
-                            maxLines: 1,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              isDense: true,
-                              hintText: 'MM',
-                              hintStyle: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[400],
+                          Container(
+                            width: 30,
+                            height: 30,
+                            alignment: Alignment.bottomCenter,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: TextField(
+                              controller: _regYearController,
+                              textAlign: TextAlign.center,
+                              textAlignVertical: TextAlignVertical.bottom,
+                              maxLines: 1,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'YYYY',
+                                hintStyle: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 12,
+                                  color: Colors.grey[400],
+                                ),
+                                contentPadding:
+                                    const EdgeInsets.only(bottom: 4),
                               ),
-                              contentPadding: const EdgeInsets.only(bottom: 4),
                             ),
                           ),
-                        ),
-                        const Text(
-                          "-",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Container(
-                          width: 30,
-                          height: 30,
-                          alignment: Alignment.bottomCenter,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: TextField(
-                            controller: _regDateController,
-                            textAlign: TextAlign.center,
-                            textAlignVertical: TextAlignVertical.bottom,
-                            maxLines: 1,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              isDense: true,
-                              hintText: 'DD',
-                              hintStyle: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[400],
-                              ),
-                              contentPadding: const EdgeInsets.only(bottom: 4),
+                          const Text(
+                            "-",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ),
-                      ],
+                          Container(
+                            width: 25,
+                            height: 30,
+                            alignment: Alignment.bottomCenter,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: TextField(
+                              controller: _regMonthController,
+                              textAlign: TextAlign.center,
+                              textAlignVertical: TextAlignVertical.bottom,
+                              maxLines: 1,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'MM',
+                                hintStyle: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[400],
+                                  fontSize: 12,
+                                ),
+                                contentPadding:
+                                    const EdgeInsets.only(bottom: 4),
+                              ),
+                            ),
+                          ),
+                          const Text(
+                            "-",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Container(
+                            width: 25,
+                            height: 30,
+                            alignment: Alignment.bottomCenter,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: TextField(
+                              controller: _regDateController,
+                              textAlign: TextAlign.center,
+                              textAlignVertical: TextAlignVertical.bottom,
+                              maxLines: 1,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'DD',
+                                hintStyle: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 12,
+                                  color: Colors.grey[400],
+                                ),
+                                contentPadding:
+                                    const EdgeInsets.only(bottom: 4),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     Row(
                       children: [
                         Icon(
                           Icons.access_alarm_outlined,
                           color: Colors.grey[900],
-                          size: 25,
+                          size: 20,
                         ),
                         const SizedBox(width: 8, height: 1),
                         const Text(
@@ -309,7 +375,7 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
                           ),
                         ),
                         Container(
-                          width: 30,
+                          width: 25,
                           height: 30,
                           alignment: Alignment.bottomCenter,
                           decoration: BoxDecoration(
@@ -326,6 +392,7 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
                               hintText: '7',
                               hintStyle: TextStyle(
                                 fontWeight: FontWeight.w500,
+                                fontSize: 12,
                                 color: Colors.grey[400],
                               ),
                               contentPadding: const EdgeInsets.only(bottom: 4),
@@ -512,7 +579,7 @@ class MedInfoTile extends StatelessWidget {
       horizontalTitleGap: 0,
       minLeadingWidth: 0,
       leading: Container(
-        width: 40,
+        width: 10,
         height: 40,
         margin: const EdgeInsets.only(right: 25),
         decoration: BoxDecoration(
@@ -531,6 +598,7 @@ class MedInfoTile extends StatelessWidget {
         ),
       ),
       title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           Container(
             width: 220,

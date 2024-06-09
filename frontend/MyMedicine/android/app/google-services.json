@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "345668641194",
+    "project_id": "flttdl",
+    "storage_bucket": "flttdl.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:345668641194:android:7e736da0be4f3e38450bd3",
+        "android_client_info": {
+          "package_name": "com.example.medicineapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDO2IDhmtrQ9Nqf3SN2d1ZJ0fjGNFsBSIY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

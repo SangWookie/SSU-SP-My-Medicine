@@ -7,18 +7,23 @@ import 'package:medicineapp/models/prescription_list_model.dart';
 import 'package:medicineapp/models/prescription_model.dart';
 import 'package:medicineapp/models/user_model.dart';
 import 'package:medicineapp/screens/presc_detail_screen.dart';
+import 'package:medicineapp/screens/presc_list_screen.dart';
 import 'package:medicineapp/services/api_services.dart';
+import 'package:medicineapp/screens/home_screen.dart';
 
 // ignore: must_be_immutable
 class PrescWidget extends StatelessWidget {
   final int index, uid, prescId;
-  // final String desc;
+  final VoidCallback onDeleted; // onDeleted 매개변수 추가
+  final Function func;
 
   PrescWidget({
     super.key,
     required this.index,
     required this.prescId,
     required this.uid,
+    required this.onDeleted, // onDeleted 매개변수 추가
+    required this.func,
   });
 
   final ApiService apiService = ApiService();
@@ -62,6 +67,9 @@ class PrescWidget extends StatelessWidget {
                 prescId: prescId,
                 context: context,
                 prescModel: prescModel,
+                onDeleted: onDeleted,
+                uid: uid,
+                func: func,
               ),
             );
           } else {
@@ -75,6 +83,9 @@ class PrescWidget extends StatelessWidget {
                 prescId: prescId,
                 context: context,
                 prescModel: prescModel,
+                onDeleted: onDeleted,
+                uid: uid,
+                func: func,
               ),
             );
           }
@@ -88,33 +99,48 @@ class _BuildPrescWidget extends StatelessWidget {
   final int prescId;
   final BuildContext context;
   final PrescModel prescModel;
+  final VoidCallback onDeleted;
+  final int uid;
+  final Function func;
 
   const _BuildPrescWidget({
     // super.key,
     required this.context,
     required this.prescModel,
     required this.prescId,
+    required this.onDeleted,
+    required this.uid,
+    required this.func,
   });
 
-  String _getPrescPicLink(int prescId) {
-    // String url = "http://141.164.62.81:5000/getPrescPic?prescId=$prescId";
-    String url = "http://43.200.168.39:8080/getPrescPic?pID=$prescId";
-    log("getPrescPicLink: $url");
-
-    return url;
-  }
+  // void _refreshData() {
+  //   // 이전 페이지로 돌아간 후 새로고침
+  //   Navigator.of(context).pushReplacement(MaterialPageRoute(
+  //     builder: (BuildContext context) => PrescListScreen(uid: uid, func: func),
+  //   ));
+  // }
 
   @override
   Widget build(BuildContext context) {
     log("is_expired: ${prescModel.isExpired}");
     return GestureDetector(
       onTap: () {
-        // Navigator.pop(context);
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => PrescDetailScreen(
+              uid: uid,
               prescModel: prescModel,
+              onDeleted: () {
+                Navigator.of(context).pop(context);
+                // Navigator.of(context).pushReplacement(MaterialPageRoute(
+                //   builder: (BuildContext context) =>
+                //       PrescListScreen(uid: uid, func: func),
+                // ));
+                // _refreshData();
+                onDeleted();
+              },
+              func: func,
             ),
           ),
         );
@@ -159,24 +185,58 @@ class _BuildPrescWidget extends StatelessWidget {
                         ),
                     ],
                   ),
-                  Container(
-                      width: 100,
-                      clipBehavior: Clip.hardEdge,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Container(
-                          foregroundDecoration: BoxDecoration(
-                            color: prescModel.isExpired
-                                ? Colors.grey[400]
-                                : Colors.white,
-                            backgroundBlendMode: BlendMode.darken,
-                          ),
-                          child: Image(
-                            image: NetworkImage(
-                              _getPrescPicLink(prescId),
+                  FutureBuilder(
+                    // future: ApiService().getPrescPic(prescId),
+                    future: _getEditedImage(prescId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      } else if (snapshot.hasData) {
+                        Uint8List? imageData = snapshot.data as Uint8List?;
+                        if (imageData != null && imageData.isNotEmpty) {
+                          return Container(
+                            width: 100,
+                            clipBehavior: Clip.hardEdge,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ))),
+                            child: Image.memory(
+                              imageData,
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        } else {
+                          log('snapshot []');
+                          return Text('No Image Available');
+                        }
+                      } else {
+                        return Text('No Image Available');
+                      }
+                    },
+                  ),
+                  // Container(
+                  //     width: 100,
+                  //     clipBehavior: Clip.hardEdge,
+                  //     decoration: BoxDecoration(
+                  //       borderRadius: BorderRadius.circular(12),
+                  //     ),
+                  //     child: Container(
+                  //       foregroundDecoration: BoxDecoration(
+                  //         color: prescModel.isExpired
+                  //             ? Colors.grey[400]
+                  //             : Colors.white,
+                  //         backgroundBlendMode: BlendMode.darken,
+                  //       ),
+                  //       child: Image(
+                  //         image: NetworkImage(
+                  //           prescImage,
+                  //         ),
+                  //       ),
+                  //     )),
                 ],
               ),
             ],
@@ -184,5 +244,16 @@ class _BuildPrescWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<Uint8List?> _getEditedImage(int prescId) async {
+    // Define the delay duration (e.g., 1 second)
+    const delayDuration = Duration(milliseconds: 300);
+
+    // Wait for the delay duration before fetching the image
+    await Future.delayed(delayDuration);
+
+    // Fetch the image from the server
+    return await ApiService().getPrescPic(prescId);
   }
 }

@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.example.medicineapp"
-    compileSdkVersion flutter.compileSdkVersion
+    compileSdkVersion 34//flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -65,4 +65,11 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    //소셜로그인
+    implementation 'com.google.firebase:firebase-auth:22.0.0'
+    implementation 'com.google.android.gms:play-services-auth'
+}
+//소셜로그인
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.android.application'

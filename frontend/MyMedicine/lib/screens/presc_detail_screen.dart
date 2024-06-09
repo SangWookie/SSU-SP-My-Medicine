@@ -1,109 +1,216 @@
 import 'dart:developer';
-import 'dart:math' as math;
-
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:medicineapp/main.dart';
 import 'package:medicineapp/models/prescription_model.dart';
+import 'package:medicineapp/screens/home_screen.dart';
+import 'package:medicineapp/screens/presc_list_screen.dart';
 import 'package:medicineapp/services/api_services.dart';
-// import 'package:medicineapp/widgets/bottom_modal_sheet.dart';
+import 'package:medicineapp/widgets/toast.dart';
+import 'package:persistent_bottom_nav_bar/persistent_tab_view.dart';
 
-class PrescDetailScreen extends StatelessWidget {
-  // final int uid, prescId;
+class PrescDetailScreen extends StatefulWidget {
   final PrescModel prescModel;
-  final ApiService _apiService = ApiService();
-  PrescDetailScreen({
-    super.key,
-    // required this.uid,
-    // required this.prescId,
+  final int uid;
+  final Function func;
+  final VoidCallback onDeleted;
+
+  const PrescDetailScreen({
+    Key? key,
     required this.prescModel,
-  });
+    required this.uid,
+    required this.func,
+    required this.onDeleted,
+  }) : super(key: key);
 
-  final List<String> randomTexts = [
-    '항히스타민제',
-    '세균감염증치료제',
-    '위점막보호제',
-    '알러지 치료제',
-    '소염진통제',
-    '알러지 치료제',
-    '위산억제제',
-    '세균감염증 치료제',
-    '위점막보호제',
-    '비스테로이드성소염제'
-  ];
+  @override
+  _PrescDetailScreenState createState() => _PrescDetailScreenState();
+}
 
-  String _getPrescPicLink(int prescId) {
-    String url = "http://43.200.168.39:8080/getPrescPic?pID=$prescId";
-    log("getPrescPicLink: $url");
+class _PrescDetailScreenState extends State<PrescDetailScreen> {
+  final ApiService _apiService = ApiService();
+  bool _hasShownWarning = false;
+  bool _isDeleting = false;
+  ScaffoldMessengerState? _scaffoldMessengerState;
+  final GlobalKey<NavigatorState> _homeNavigatorKey =
+      GlobalKey<NavigatorState>();
 
-    return url;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasShownWarning) {
+        _showWarningDialog(context);
+        _hasShownWarning = true;
+      }
+    });
   }
 
-/////////////////////////////////////////////////////
-  // 삭제 함수 정의
-  Future<void> _deletePrescription(
-      BuildContext context, int prescriptionId) async {
-    try {
-      await _apiService.deletePrescription(prescriptionId);
-      // 성공적으로 삭제되면 알림을 띄웁니다.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('처방전이 성공적으로 삭제되었습니다.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      // 삭제 후 화면을 갱신할 수 있는 로직을 추가할 수 있습니다.
-    } catch (e) {
-      // 실패 시 에러 메시지를 띄웁니다.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('처방전 삭제 중 오류가 발생했습니다.'),
-          duration: Duration(seconds: 2),
-        ),
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessengerState = ScaffoldMessenger.of(context);
+  }
+
+  Future<Uint8List> prescImage(int prescId) {
+    return _apiService.getPrescPic(prescId);
+  }
+
+  void _showWarningDialog(BuildContext context) {
+    if (context == null || _isDeleting) return;
+
+    String warningMessage = '';
+    if (widget.prescModel.duplicateMed != null &&
+        widget.prescModel.duplicateMed!.isNotEmpty) {
+      log("warning duplicated: ${widget.prescModel.duplicateMed}");
+      log("warning prescId: ${widget.prescModel.prescId}");
+      warningMessage += '/중복 복용 경고/\n';
+      warningMessage += '${widget.prescModel.duplicateMed!.join(', ')}\n';
+      warningMessage += '이 성분명의 약품을 중복 복용할 위험이 있습니다\n';
+    }
+    if (widget.prescModel.allergicMed != null &&
+        widget.prescModel.allergicMed!.isNotEmpty) {
+      warningMessage +=
+          '/알러지 경고/\n ${widget.prescModel.allergicMed!.join(', ')} \n 이 성분명의 약품은 알러지 반응 위험이 있는 약품입니다';
+    }
+    if (warningMessage.isNotEmpty) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (BuildContext context) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.5,
+            margin: const EdgeInsets.only(left: 25, right: 25, bottom: 40),
+            padding: EdgeInsets.symmetric(
+                vertical: MediaQuery.of(context).size.height * 0.03,
+                horizontal: MediaQuery.of(context).size.width * 0.07),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          color: Color(0xffe66452), size: 26),
+                      Text(
+                        " 경고 ",
+                        style: TextStyle(
+                          fontSize: 26,
+                          color: Color(0xffe66452),
+                        ),
+                      ),
+                      Icon(Icons.warning_amber_rounded,
+                          color: Color(0xffe66452), size: 26),
+                    ],
+                  ),
+                  Column(
+                    children: [Text(warningMessage)],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       );
     }
   }
 
-///////////////////////////////////////////////////
+  Future<void> _deletePrescription(
+      BuildContext context, int prescriptionId) async {
+    setState(() {
+      _isDeleting = true;
+    });
+    try {
+      await _apiService.deletePrescription(prescriptionId);
+      // _scaffoldMessengerState?.showSnackBar(
+      //   const SnackBar(
+      //     content: Text('처방전이 성공적으로 삭제되었습니다.'),
+      //     duration: Duration(seconds: 2),
+      //   ),
+      // );
+      showToast("처방전이 성공적으로 삭제되었습니다.");
+      widget.onDeleted();
+      // Navigator.pushReplacement(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => HomeScreen(
+      //       uid: widget.uid,
+      //       func: widget.func,
+      //     ),
+      //   ),
+      // );
+
+      _homeNavigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(
+            uid: widget.uid,
+            func: widget.func,
+          ),
+        ),
+      );
+    } catch (e) {
+      // _scaffoldMessengerState?.showSnackBar(
+      //   const SnackBar(
+      //     content: Text('처방전 삭제 중 오류가 발생했습니다.'),
+      //     duration: Duration(seconds: 2),
+      //   ),
+      // );
+      showToast("처방전 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setState(() {
+        _isDeleting = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scaffoldMessengerState = null;
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _homeNavigatorKey,
       appBar: AppBar(
         title: Container(
-          padding: const EdgeInsets.only(
-            bottom: 1,
-          ),
+          padding: const EdgeInsets.only(bottom: 1),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(width: 10, height: 1), // for centering text
+              const SizedBox(width: 10, height: 1),
               const Text('처방전 상세정보'),
               Row(
                 children: [
-                  //Icon(Icons.edit, color: Colors.grey[700], size: 30),
-                  //const SizedBox(width: 3, height: 1),
-                  //Icon(Icons.delete_rounded, color: Colors.grey[700], size: 30),
                   GestureDetector(
                     onTap: () {
                       showDialog(
                         context: context,
                         builder: (BuildContext context) {
                           return AlertDialog(
-                            title: Text("처방전 삭제"),
-                            content: Text("이 처방전을 삭제하시겠습니까?"),
+                            title: const Text("처방전 삭제"),
+                            content: const Text("이 처방전을 삭제하시겠습니까?"),
                             actions: [
                               TextButton(
                                 onPressed: () {
                                   Navigator.of(context).pop();
                                 },
-                                child: Text("취소"),
+                                child: const Text("취소"),
                               ),
+                              //처방건 삭제
                               TextButton(
                                 onPressed: () {
                                   _deletePrescription(
-                                      context, prescModel.prescIdValue);
-                                  Navigator.of(context).pop();
+                                      context, widget.prescModel.prescIdValue);
+                                  Navigator.of(context).pop(context);
                                 },
-                                child: Text("삭제"),
+                                child: const Text("삭제"),
                               ),
                             ],
                           );
@@ -114,25 +221,17 @@ class PrescDetailScreen extends StatelessWidget {
                         color: Colors.grey[700], size: 30),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
-        // backgroundColor: Colors.grey[100],
         backgroundColor: Colors.white,
         elevation: 5,
         shadowColor: Colors.grey[300],
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          // borderRadius: BorderRadius.circular(18),
-        ),
-        padding: const EdgeInsets.only(
-          top: 25,
-          left: 25,
-          right: 25,
-        ),
+        decoration: const BoxDecoration(color: Colors.white),
+        padding: const EdgeInsets.only(top: 25, left: 25, right: 25),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -147,30 +246,17 @@ class PrescDetailScreen extends StatelessWidget {
                         Icon(Icons.calendar_today_outlined,
                             color: Colors.grey[700], size: 22),
                         const SizedBox(width: 5, height: 1),
-                        Text(prescModel.regDate,
+                        Text(widget.prescModel.regDate,
                             style: const TextStyle(
                                 fontSize: 20, fontWeight: FontWeight.w500)),
                       ],
                     ),
-                    // Row(
-                    //   children: [
-                    //     Icon(Icons.place_outlined,
-                    //         color: Colors.grey[700], size: 25),
-                    //     const SizedBox(width: 3, height: 1),
-                    //     const Text("하나로병원",
-                    //         style: TextStyle(
-                    //             fontSize: 14, fontWeight: FontWeight.w500)),
-                    //   ],
-                    // )
                   ],
                 ),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.005),
                 const Divider(),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.005),
-                // Text('처방전번호: ${prescModel.prescId.toString()}',
-                //     style: const TextStyle(
-                //         fontSize: 16, fontWeight: FontWeight.w500)),
-                Text('처방기간: ${prescModel.prescPeriodDays.toString()}일',
+                Text('처방기간: ${widget.prescModel.prescPeriodDays.toString()}일',
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w500)),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.005),
@@ -184,19 +270,19 @@ class PrescDetailScreen extends StatelessWidget {
                     children: [
                       SizedBox(
                           height: MediaQuery.of(context).size.height * 0.005),
-                      for (var i = 0; i < prescModel.medicineListLength; i++)
+                      for (var i = 0;
+                          i < widget.prescModel.medicineListLength;
+                          i++)
                         Row(
                           children: [
                             Text(
-                              prescModel.medicineList[i],
+                              widget.prescModel.medicineList[i],
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            Text(
-                                // "  |  ${randomTexts[math.Random().nextInt(randomTexts.length)]}"),
-                                "  |  ${randomTexts[i]}"),
+                            Text("  |  ${widget.prescModel.medcompList[i]}"),
                           ],
                         ),
                     ],
@@ -208,17 +294,49 @@ class PrescDetailScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: Container(
-                    foregroundDecoration: BoxDecoration(
-                      color: prescModel.isExpired
-                          ? Colors.grey[300]
-                          : Colors.white,
-                      backgroundBlendMode: BlendMode.darken,
-                    ),
-                    child: Image.network(
-                      _getPrescPicLink(prescModel.prescIdValue),
-                      height: MediaQuery.of(context).size.height * 0.35,
-                    ),
+                  child: FutureBuilder<Uint8List>(
+                    future: ApiService()
+                        .getPrescPic(widget.prescModel.prescIdValue),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      } else if (snapshot.hasError) {
+                        return Center(child: Text('이미지를 불러오는데 오류가 발생했습니다.'));
+                      } else if (snapshot.hasData) {
+                        Uint8List? imageData = snapshot.data as Uint8List;
+                        if (imageData != null && imageData.isNotEmpty) {
+                          return Container(
+                            width: 100,
+                            clipBehavior: Clip.hardEdge,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Image.memory(
+                              imageData,
+                              fit: BoxFit.cover,
+                            ),
+                            // foregroundDecoration: BoxDecoration(
+                            //   color: widget.prescModel.isExpired
+                            //       ? Colors.grey[300]
+                            //       : Colors.white,
+                            //   backgroundBlendMode: BlendMode.darken,
+                            // ),
+                            // child: Image.memory(
+                            //   snapshot.data!,
+                            //   height: MediaQuery.of(context).size.height * 0.35,
+                            //   fit: BoxFit.cover,
+                            // ),
+                          );
+                        } else {
+                          log('snapshot []');
+                          return Text('No Image Available');
+                        }
+                      } else {
+                        return Center(child: Text('이미지를 불러올 수 없습니다.'));
+                      }
+                    },
                   ),
                 ),
                 SizedBox(
@@ -234,7 +352,6 @@ class PrescDetailScreen extends StatelessWidget {
                   height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                        // minimumSize: const Size(300, 50),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12.0),
                         ),
@@ -270,21 +387,27 @@ class PrescDetailScreen extends StatelessWidget {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(Icons.warning_amber_rounded,
-                                          color: Color(0xffe66452), size: 26),
+                                          color:
+                                              Color.fromARGB(255, 222, 211, 0),
+                                          size: 26),
                                       Text(
                                         " 주의 ",
                                         style: TextStyle(
                                           fontSize: 26,
-                                          color: Color(0xffe66452),
+                                          color:
+                                              Color.fromARGB(255, 222, 211, 0),
                                         ),
                                       ),
                                       Icon(Icons.warning_amber_rounded,
-                                          color: Color(0xffe66452), size: 26),
+                                          color:
+                                              Color.fromARGB(255, 222, 211, 0),
+                                          size: 26),
                                     ],
                                   ),
                                   Column(
                                     children: [
-                                      Text(prescModel.generatedInstruction),
+                                      Text(widget
+                                          .prescModel.generatedInstruction),
                                     ],
                                   )
                                 ],
@@ -300,7 +423,7 @@ class PrescDetailScreen extends StatelessWidget {
                         fontSize: 18,
                         color: Colors.white,
                       ),
-                    ), // Change this to your desired button text
+                    ),
                   ),
                 ),
                 SizedBox(

@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:medicineapp/models/prescription_list_model.dart';
 import 'package:medicineapp/models/user_model.dart';
+import 'package:medicineapp/screens/home_screen.dart';
 import 'package:medicineapp/screens/login_screen.dart';
 import 'package:medicineapp/ui_consts.dart';
 import 'package:medicineapp/services/api_services.dart';
@@ -11,7 +12,7 @@ import 'package:restart_app/restart_app.dart';
 
 class PrescListScreen extends StatefulWidget {
   final int uid;
-  Function func;
+  final Function func;
 
   PrescListScreen({
     super.key,
@@ -30,24 +31,27 @@ class _PrescListScreenState extends State<PrescListScreen> {
   @override
   void initState() {
     super.initState();
-    futureData = fetchData();
+    fetchData();
   }
 
-  Future<List<dynamic>> fetchData() {
-    return Future.wait([
+  Future<void> fetchData() async {
+    futureData = Future.wait([
       apiService.pingServer(),
       apiService.getPrescList(widget.uid),
     ]);
+    setState(() {}); // 화면 갱신
   }
 
   @override
   Widget build(BuildContext context) {
+    setState(() {
+      fetchData();
+    });
     return Scaffold(
       backgroundColor: const Color(0xfff2f2fe),
       appBar: AppBar(
         title: Container(
           padding: const EdgeInsets.only(
-            // vertical: 40,
             left: 12,
             right: 0,
           ),
@@ -61,29 +65,55 @@ class _PrescListScreenState extends State<PrescListScreen> {
               Row(
                 children: [
                   IconButton(
-                      onPressed: () {
-                        // Navigator.pushReplacement(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (BuildContext context) => super.widget,
-                        //   ),
-                        // );
-                        setState(() {
-                          futureData = fetchData();
-                        });
-                      },
-                      icon: const Icon(Icons.refresh,
-                          color: Colors.white, size: 32)),
-                  // const SizedBox(width: 5),
-                  const Icon(Icons.notifications,
-                      color: Colors.white, size: 32),
-                  // const SizedBox(width: 5),
+                    onPressed: () {
+                      setState(() {
+                        fetchData();
+                      });
+                    },
+                    icon: const Icon(Icons.refresh,
+                        color: Colors.white, size: 32),
+                  ),
+                  // const Icon(Icons.notifications,
+                  //     color: Colors.white, size: 32),
                   IconButton(
-                      onPressed: () {
-                        Restart.restartApp();
-                      },
-                      icon: const Icon(Icons.logout,
-                          color: Colors.white, size: 32)),
+                    onPressed: () {
+                      // Navigator.pushReplacement(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (context) => LoginScreen(
+                      //       func: widget.func,
+                      //     ),
+                      //   ),
+                      // );
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text("로그아웃"),
+                            content: const Text("로그아웃 하시겠습니까?"),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text("취소"),
+                              ),
+                              //처방건 삭제
+                              TextButton(
+                                onPressed: () {
+                                  widget.func(context);
+                                  Navigator.of(context).pop(context);
+                                },
+                                child: const Text("확인"),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    icon:
+                        const Icon(Icons.logout, color: Colors.white, size: 31),
+                  ),
                 ],
               ),
             ],
@@ -118,19 +148,23 @@ class _PrescListScreenState extends State<PrescListScreen> {
                       log("presc_list_screen: ${snapshot.data![1].toString()}");
                       log("presc_list_screen: ${snapshot.data![1].prescIdList.toString()}");
                       if (snapshot.data![1] == null ||
-                          snapshot.data![1].prescIdList[0] == null) {
+                          snapshot.data![1]!.prescIdList == null) {
                         return const Center(
-                          child: Text('No data'),
+                          child: Text('처방전 정보가 없습니다.'),
                         );
                       } else {
                         return ListView.builder(
-                          itemCount: snapshot.data![1].length,
+                          itemCount: snapshot.data![1].prescIdList.length,
                           itemBuilder: (context, index) {
+                            int prescIndex = index;
+                            log("presclist widget: ${snapshot.data![1].prescIdList[prescIndex]}");
                             return PrescWidget(
                               index: index,
                               uid: widget.uid,
-                              prescId: snapshot.data![1].prescIdList[
-                                  snapshot.data![1].length - index - 1],
+                              prescId:
+                                  snapshot.data![1].prescIdList[prescIndex],
+                              onDeleted: fetchData,
+                              func: widget.func,
                             );
                           },
                         );

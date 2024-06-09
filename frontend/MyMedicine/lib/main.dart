@@ -17,6 +17,7 @@ class MyWidgetsBinding extends WidgetsFlutterBinding {
   ImageCache createImageCache() => MyImageCache();
 }
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() {
   HttpOverrides.global = MyHttpOverrides();
   MyWidgetsBinding();
@@ -24,9 +25,13 @@ void main() {
   runApp(const MyApp());
 }
 
+void asd() {
+  Function func;
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
-
+  // final Function func;
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -34,8 +39,11 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme:
           ThemeData(primarySwatch: Colors.deepPurple, fontFamily: "NotoSansKR"),
-      home: LoginScreen(),
+      home: LoginScreen(
+        func: asd,
+      ),
       // home: const TempWidget(),
+      navigatorKey: navigatorKey,
     );
   }
 }
