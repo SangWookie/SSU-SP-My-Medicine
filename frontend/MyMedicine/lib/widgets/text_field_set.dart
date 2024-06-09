@@ -4,11 +4,14 @@ class TextFieldSet extends StatelessWidget {
   final TextEditingController usernameController;
   final TextEditingController passwordController;
 
-  const TextFieldSet({
+  TextFieldSet({
     required this.usernameController,
     required this.passwordController,
     Key? key,
   }) : super(key: key);
+
+  final FocusNode usernameFocusNode = FocusNode();
+  final FocusNode passwordFocusNode = FocusNode();
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +26,8 @@ class TextFieldSet extends StatelessWidget {
             controller: usernameController,
             hintText: '아이디',
             obscureText: false,
+            focusNode: usernameFocusNode,
+            nextFocusNode: passwordFocusNode,
           ),
           Container(
             padding: const EdgeInsets.symmetric(
@@ -36,6 +41,7 @@ class TextFieldSet extends StatelessWidget {
             controller: passwordController,
             hintText: '비밀번호',
             obscureText: true,
+            focusNode: passwordFocusNode,
           ),
         ],
       ),
@@ -47,11 +53,15 @@ class LoginTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final bool obscureText;
+  final FocusNode focusNode;
+  final FocusNode? nextFocusNode;
 
   const LoginTextField({
     required this.controller,
     required this.hintText,
     required this.obscureText,
+    required this.focusNode,
+    this.nextFocusNode,
     Key? key,
   }) : super(key: key);
 
@@ -60,6 +70,14 @@ class LoginTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
+      focusNode: focusNode,
+      textInputAction:
+          nextFocusNode != null ? TextInputAction.next : TextInputAction.done,
+      onFieldSubmitted: (_) {
+        if (nextFocusNode != null) {
+          FocusScope.of(context).requestFocus(nextFocusNode);
+        }
+      },
       style: const TextStyle(
         fontSize: 15,
       ),

@@ -190,45 +190,6 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                     ),
                   ]),
                   const Divider(),
-                  // Column(
-                  //   crossAxisAlignment: CrossAxisAlignment.center,
-                  //   children: [
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.center,
-                  //   children: [
-                  //     ElevatedButton(
-                  //       onPressed: () {
-                  //         _showAllergiesDialog(context);
-                  //         saveInput();
-                  //       },
-                  //       child: Text('알러지 재선택'),
-                  //     ),
-                  //     SizedBox(width: 10),
-                  //     ElevatedButton(
-                  //       onPressed: () {
-                  //         _showPersonalInfoDialog(context);
-                  //       },
-                  //       child: Text('회원정보 재입력'),
-                  //     ),
-                  //   ],
-                  // ),
-                  // SizedBox(height: 10),
-                  // ElevatedButton(
-                  //   onPressed: () async {
-                  //     edit(
-                  //         context,
-                  //         user.uID,
-                  //         selectedAllergies,
-                  //         user.name,
-                  //         user.birthDate,
-                  //         user.gender,
-                  //         user.height,
-                  //         user.weight);
-                  //   },
-                  //   child: Text('정보수정'),
-                  // ),
-                  // ],
-                  // ),
                 ],
               ),
             );

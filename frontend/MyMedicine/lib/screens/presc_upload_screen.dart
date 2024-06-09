@@ -35,26 +35,35 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
   final _regMonthController = TextEditingController();
   final _regDateController = TextEditingController();
 
+  final List<FocusNode> _focusDateNodes = [];
+  final List<FocusNode> _focusNodes = [];
+
   XFile? _image;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
       _controllers.add(TextEditingController());
+      _focusNodes.add(FocusNode());
+    }
+    for (int i = 0; i < 5; i++) {
+      _focusDateNodes.add(FocusNode());
     }
   }
 
   void _addTile() {
     setState(() {
       _controllers.add(TextEditingController());
+      _focusNodes.add(FocusNode());
     });
   }
 
   void _removeTile(int index) {
     setState(() {
       _controllers.removeAt(index - 1);
+      _focusNodes.removeAt(index - 1);
     });
   }
 
@@ -89,6 +98,22 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
     }
   }
 
+  void _handleSubmitted(String value, int fieldIndex) {
+    if (fieldIndex < _controllers.length - 1) {
+      FocusScope.of(context).requestFocus(_focusNodes[fieldIndex + 1]);
+    } else {
+      FocusScope.of(context).unfocus();
+    }
+  }
+
+  void _handleDateSubmitted(String value, int fieldIndex) {
+    if (fieldIndex < 3) {
+      FocusScope.of(context).requestFocus(_focusDateNodes[fieldIndex + 1]);
+    } else {
+      FocusScope.of(context).requestFocus(_focusNodes[0]);
+    }
+  }
+
   void validateAndSubmit(BuildContext context) async {
     String medicineList = _fetchMedicineList();
 
@@ -110,7 +135,12 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
         _regDateController.text.isEmpty ||
         !isInteger(_regYearController.text) ||
         !isInteger(_regMonthController.text) ||
-        !isInteger(_regDateController.text)) {
+        !isInteger(_regDateController.text) ||
+        _regYearController.text.length != 4 ||
+        _regMonthController.text.length > 2 ||
+        _regDateController.text.length > 2 ||
+        int.parse(_regMonthController.text) > 12 ||
+        int.parse(_regDateController.text) > 31) {
       showToast("처방일자를 올바르게 입력해주세요");
       return;
     }
@@ -277,6 +307,10 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
                               textAlignVertical: TextAlignVertical.bottom,
                               maxLines: 1,
                               keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              onSubmitted: (value) =>
+                                  _handleDateSubmitted(value, 0),
+                              focusNode: _focusDateNodes[0],
                               decoration: InputDecoration(
                                 isDense: true,
                                 hintText: 'YYYY',
@@ -310,6 +344,10 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
                               textAlignVertical: TextAlignVertical.bottom,
                               maxLines: 1,
                               keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              onSubmitted: (value) =>
+                                  _handleDateSubmitted(value, 1),
+                              focusNode: _focusDateNodes[1],
                               decoration: InputDecoration(
                                 isDense: true,
                                 hintText: 'MM',
@@ -343,6 +381,10 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
                               textAlignVertical: TextAlignVertical.bottom,
                               maxLines: 1,
                               keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              onSubmitted: (value) =>
+                                  _handleDateSubmitted(value, 2),
+                              focusNode: _focusDateNodes[2],
                               decoration: InputDecoration(
                                 isDense: true,
                                 hintText: 'DD',
@@ -387,6 +429,10 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
                             textAlignVertical: TextAlignVertical.bottom,
                             maxLines: 1,
                             keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            onSubmitted: (value) =>
+                                _handleDateSubmitted(value, 3),
+                            focusNode: _focusDateNodes[3],
                             decoration: InputDecoration(
                               isDense: true,
                               hintText: '7',
@@ -431,10 +477,12 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
                           itemCount: _controllers.length,
                           itemBuilder: (context, index) {
                             return MedInfoTile(
-                              idx: index + 1,
-                              controller: _controllers[index],
-                              onRemove: _removeTile,
-                            );
+                                idx: index + 1,
+                                controller: _controllers[index],
+                                onRemove: _removeTile,
+                                focusNode: _focusNodes[index],
+                                onSubmitted: (value) =>
+                                    _handleSubmitted(value, index));
                           },
                         ),
                       ),
@@ -552,6 +600,8 @@ class _PrescUploadScreenState extends State<PrescUploadScreen> {
     _regMonthController.dispose();
     _regDateController.dispose();
     _controllers.forEach((controller) => controller.dispose());
+    _focusNodes.forEach((focusNode) => focusNode.dispose());
+    _focusDateNodes.forEach((focusDateNode) => focusDateNode.dispose());
     super.dispose();
   }
 }
@@ -560,12 +610,16 @@ class MedInfoTile extends StatelessWidget {
   final int idx;
   final TextEditingController controller;
   Function onRemove;
+  final FocusNode focusNode;
+  final Function(String) onSubmitted;
 
   MedInfoTile({
     Key? key,
     required this.idx,
     required this.controller,
     required this.onRemove,
+    required this.focusNode,
+    required this.onSubmitted,
   });
 
   @override
@@ -612,6 +666,9 @@ class MedInfoTile extends StatelessWidget {
               textAlign: TextAlign.center,
               textAlignVertical: TextAlignVertical.bottom,
               maxLines: 1,
+              textInputAction: TextInputAction.next,
+              onSubmitted: onSubmitted,
+              focusNode: focusNode,
               decoration: InputDecoration(
                 isDense: true,
                 hintText: '아스피린',
